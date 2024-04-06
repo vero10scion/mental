@@ -1,0 +1,2317 @@
+---
+title: "Компьютерная работа №1"
+author: "Ганин Виктор, Арзанунц Мушег, Есипова Полина, Нечаева Вероника, Утепова Ирина"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+# Предварительная работа
+
+```{r message=FALSE, warning=FALSE}
+library('kableExtra')
+library('magrittr')
+library('openxlsx')
+library('DescTools')
+library('EnvStats')
+library('outliers')
+library('psych')
+library('ggplot2')
+library('pander')
+library('fBasics')
+library('nortest')
+library('corrplot')
+library('ppcor')
+library('ggpubr')
+library('questionr')
+library('tseries')
+library('leaps')
+library('GGally')
+library('lmtest')
+library('summarytools')
+library('dplyr')
+library('lattice')
+```
+
+На подготовительном этапе работы команда собрала данные по исследуемым переменным из открытых источников, таких как официальные сайты Федеральной службы государственной статистики и Министерства здравоохранения Российской федерации.
+
+Извлечем из файла Excel таблицу, содержащую информацию по всем показателям по субъектам федерации (85) за 2018 год:
+
+```{r}
+df <- read.xlsx('Data_Psyc_Disease_Regions_absolute_values.xlsx', sheet = 'Data')
+```
+
+# Постановка задачи
+
+##  Описание и обоснование системы показателей, обоснование репрезентативности выборки
+
+Современный человек все чаще сталкивается с проблемами психического характера в своей повседневной жизни. Наша команда решила проверить, какие факторы оказывают воздействие, а также оценить степень влияния различных признаков на число пациентов с психическими расстройствами.
+
+Факторы, оказывающие влияние на исследуемую переменную:
+
+1. Связанные со здравоохранением (число коек психиатрических специальностей, численность врачей-психиатров)
+
+2. Экономические (численность населения с денежными доходами ниже границы бедности, численность безработных в возрасте 15-72 лет)
+
+3. Социально-демографические (число пациентов с синдромом зависимости от наркотических веществ, численность инвалидов, пенсионеров и количество разводов) 
+
+Примечание. На графиках зависимая переменная обозначается синим цветом, переменные, связанные со здравоохранением - светло-зеленым, экономические переменные - красным, социально-демографические - розовым.
+
+В представленных нами данных (85 наблюдений) отражены все регионы РФ (на 2018 год), тем самым мы удовлетворяем главному свойству репрезентативности - представляем все подгруппы, которые в свою очередь имеют одинаковую вероятность попасть в конечную выборку, таким свойством мы демонстрируем, что наша выборка описывает способность выборочных данных отражать структурные свойства совокупности, из которой они были извлечены (т. е. в исследовании мы можем безболезненно заменить совокупность на выборку без значимого ухудшения результатов анализа). Таким образом, можно сделать вывод, что анализируемые данные содержат достаточно информации для построения качественной модели.
+
+## Выдвижение рабочих гипотез исследования
+
+Наша команда выдвинула следующие гипотезы исследования:
+
+1. Медицинские факторы (доступность медицинских услуг, квалификация медицинского персонала, использование новых технологий в психиатрии и т.д.) оказывают влияние на количество пациентов с психическими расстройствами.
+
+2. Экономические факторы (уровень доходов населения, объемы финансирования здравоохранения, уровень безработицы и т.д.) могут влиять на количество пациентов с психическими расстройствами.
+
+3. Социально-демографические факторы (возраст, пол, образование, миграционные процессы, уровень преступности и т.д.) могут влиять на количество пациентов с психическими расстройствами.
+
+4. Каждый регион России имеет свои особенности, которые могут оказывать влияние на количество пациентов с психическими расстройствами в этом регионе.
+
+5. Взаимодействие между медицинскими, экономическими и социально-демографическими факторами может оказывать комплексное влияние на количество пациентов с психическими расстройствами.
+
+# Основные характеристики исследуемых случайных величин
+
+## Число пациентов с психическими расстройствами, обратившихся в психоневрологические организации
+
+### Характеристика центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_MENT_DIS), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_MENT_DIS))
+paste('Мода: Mo = ', Mode(df$NUM_OF_MENT_DIS)) 
+```
+
+Все значения переменной уникальны, о чём говорит отсутствие моды в данных. Значения среднего и медианы различны, что может говорить о том, что распределение переменной не является нормальным.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_MENT_DIS))
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_MENT_DIS, probs = seq(0, 1, 0.1))) 
+```
+
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_MENT_DIS))
+summary(df$NUM_OF_MENT_DIS)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+range(df$NUM_OF_MENT_DIS)
+paste('min = ', range(df$NUM_OF_MENT_DIS)[1])
+paste('max = ', range(df$NUM_OF_MENT_DIS)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_MENT_DIS)[2] - range(df$NUM_OF_MENT_DIS)[1], 3))
+
+paste('Дисперсия: Var(HI) = ', round(var(df$NUM_OF_MENT_DIS), 3))
+paste('Стандартное отклонение: sd(HI) = ', round(sd(df$NUM_OF_MENT_DIS), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_MENT_DIS))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_MENT_DIS)*100, 3), '%')
+```
+
+Коэффициент вариации равнен приблизительно 89%, что больше 33%, следовательно, распределение неоднородно.
+
+## Число коек психиатрических специальностей
+
+### Характеристика центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_PSYC_BEDS), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_PSYC_BEDS))
+paste('Мода: Mo = ', Mode(df$NUM_OF_PSYC_BEDS)) 
+```
+
+Поскольку значения средней, медианы и моды не равны, не похоже, что данная переменная имеет нормальное распределение.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_PSYC_BEDS))
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_PSYC_BEDS, probs = seq(0, 1, 0.1))) 
+```
+
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_PSYC_BEDS))
+summary(df$NUM_OF_PSYC_BEDS)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+range(df$NUM_OF_PSYC_BEDS)
+paste('min = ', range(df$NUM_OF_PSYC_BEDS)[1])
+paste('max = ', range(df$NUM_OF_PSYC_BEDS)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_PSYC_BEDS)[2] - range(df$NUM_OF_PSYC_BEDS)[1], 3))
+
+paste('Дисперсия: Var(HI) = ', round(var(df$NUM_OF_PSYC_BEDS), 3))
+paste('Стандартное отклонение: sd(HI) = ', round(sd(df$NUM_OF_PSYC_BEDS), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_PSYC_BEDS))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_PSYC_BEDS)*100, 3), '%')
+```
+
+Коэффициент вариации равнен приблизительно 98%, что больше 33%, следовательно, распределение неоднородно.
+
+## Количество врачей-психиатров
+
+### Характеристики центра:
+```{r, echo = FALSE}
+paste('Среднее: ', mean(df$NUM_OF_MEDICS))
+paste('Медиана: Me = ', median(df$NUM_OF_MEDICS))
+paste('Мода: Mo = ', Mode(df$NUM_OF_MEDICS))
+```
+Среднее и медиана не равны. Распределение полимодальное. Как следствие, данные распределены не по нормальному закону.
+
+### Ранговые характеристики:
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_MEDICS, na.rm = TRUE))
+```
+
+### Децильные группы:
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_MEDICS, na.rm = TRUE, probs = seq(0, 1, 0.1)))
+```
+Значения статистик можно получить одной командой:
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_MEDICS))
+summary(df$NUM_OF_MEDICS)
+```
+### Характеристики разброса:
+```{r, echo = FALSE}
+range(df$NUM_OF_MEDICS, na.rm = TRUE)
+paste('min = ', range(df$NUM_OF_MEDICS, na.rm = TRUE)[1])
+paste('max = ', range(df$NUM_OF_MEDICS, na.rm = TRUE)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_MEDICS, na.rm = TRUE)[2] - range(df$NUM_OF_MEDICS, na.rm = TRUE)[1], 3))
+
+paste('Дисперсия: Var(HI) = ', round(var(df$NUM_OF_MEDICS, na.rm = TRUE), 3))
+paste('Стандартное отклонение: sd(HI) = ', round(sd(df$NUM_OF_MEDICS, na.rm = TRUE), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_MEDICS, na.rm = TRUE))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_MEDICS, na.rm = TRUE)*100, 3), '%')
+```
+О чем говорит полученное значение коэффициента вариации?
+Значение превышает 33%, значит, переменная NUM_OF_MEDICS неоднородна, степень рассеивания данных значительна.
+
+## Численность населения с денежными доходами ниже границы бедности (величины прожиточного минимума) в процентах от общей численности населения
+
+### Характеристика центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_LOWER_INCOME), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_LOWER_INCOME))
+paste('Мода: Mo = ', Mode(df$NUM_OF_LOWER_INCOME)) 
+```
+
+Значения средней и медианы отличаются, но не сильно. Медиана и мода равны. Не исключено, что данная переменная может быть распределена по нормальному закону.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_LOWER_INCOME))
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_LOWER_INCOME, probs = seq(0, 1, 0.1))) 
+```
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_MENT_DIS))
+summary(df$NUM_OF_MENT_DIS)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+range(df$NUM_OF_LOWER_INCOME)
+paste('min = ', range(df$NUM_OF_LOWER_INCOME)[1])
+paste('max = ', range(df$NUM_OF_LOWER_INCOME)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_LOWER_INCOME)[2] - range(df$NUM_OF_LOWER_INCOME)[1], 3))
+
+paste('Дисперсия: Var(HI) = ', round(var(df$NUM_OF_LOWER_INCOME), 3))
+paste('Стандартное отклонение: sd(HI) = ', round(sd(df$NUM_OF_LOWER_INCOME), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_LOWER_INCOME))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_LOWER_INCOME)*100, 3), '%')
+```
+
+Коэффициент вариации равен приблизительно 36%, что больше 33%, следовательно, распределение неоднородно.
+
+## Количество безработных в возрасте 15-72 лет
+
+### Характеристики центра:
+```{r, echo = FALSE}
+paste('Среднее: ', mean(df$NUM_OF_UNEMPLOY, na.rm=TRUE))
+paste('Медиана: Me = ', median(df$NUM_OF_UNEMPLOY, na.rm=TRUE))
+paste('Мода: Mo = ', Mode(df$NUM_OF_UNEMPLOY, na.rm=TRUE))
+```
+Среднее и мода приблизительно равны. Значение медианы довольно сильно от них отличается. Для того чтобы сделать однозначный вывод о том, подчиняется ли данный признак нормальному закону, необходимы дополнительные исследования.
+
+### Ранговые характеристики:
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_UNEMPLOY, na.rm = TRUE))
+```
+
+### Децильные группы:
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_UNEMPLOY, na.rm = TRUE, probs = seq(0, 1, 0.1)))
+```
+Значения статистик можно получить одной командой:
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_UNEMPLOY))
+summary(df$NUM_OF_UNEMPLOY)
+```
+### Характеристики разброса:
+```{r, echo = FALSE}
+paste('min = ', range(df$NUM_OF_UNEMPLOY)[1])
+paste('max = ', range(df$NUM_OF_UNEMPLOY)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_UNEMPLOY)[2] - range(df$NUM_OF_UNEMPLOY)[1], 3))
+
+paste('Дисперсия: Var(HI) = ', round(var(df$NUM_OF_UNEMPLOY), 3))
+paste('Стандартное отклонение: sd(HI) = ', round(sd(df$NUM_OF_UNEMPLOY), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_UNEMPLOY, 3))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_UNEMPLOY)*100, 3), '%')
+```
+О чем говорит полученное значение коэффициента вариации?
+
+Значение приблизительно равно 75%, что превышает 33%. Это означает, что переменная NUM_OF_UNEMPLOY неоднородна.
+
+## Число пациентов с синдромом зависимости от наркотических веществ
+
+### Характеристика центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_DRUG_ADDICT), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_DRUG_ADDICT))
+paste('Мода: Mo = ', Mode(df$NUM_OF_DRUG_ADDICT)) 
+```
+
+Значения средней и медианы не равны, что может указывать на то, что данная переменная не имеет нормальное распределение. Также, видим, что у исследуемого показателя несколько мод, что не свойственно нормальному распределению.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_DRUG_ADDICT))
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_DRUG_ADDICT, probs = seq(0, 1, 0.1)))
+```
+
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_DRUG_ADDICT))
+summary(df$NUM_OF_DRUG_ADDICT)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+paste('min = ', range(df$NUM_OF_DRUG_ADDICT)[1])
+paste('max = ', range(df$NUM_OF_DRUG_ADDICT)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_DRUG_ADDICT)[2] - range(df$NUM_OF_DRUG_ADDICT)[1], 3))
+
+paste('Дисперсия: Var(HI) = ', round(var(df$NUM_OF_DRUG_ADDICT), 3))
+paste('Стандартное отклонение: sd(HI) = ', round(sd(df$NUM_OF_DRUG_ADDICT), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_DRUG_ADDICT))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_DRUG_ADDICT)*100, 3), '%')
+```
+
+Коэффициент вариации равен приблизительно 118%, что больше 33%, следовательно, распределение неоднородно.
+
+## Количество инвалидов
+
+### Характеристики центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_DISABLED), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_DISABLED))
+paste('Мода: Mo = ', Mode(df$NUM_OF_DISABLED)) 
+```
+
+Отметим, что значения среднего и медианы не равны, нельзя говорить о наличии нормального распределения исследуемой переменной. Отметим также, что все значения переменной уникальны, о чём говорит отсутствие моды в данных.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_DISABLED)) 
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_DISABLED, probs = seq(0, 1, 0.1))) 
+```
+
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_DISABLED))
+summary(df$NUM_OF_DISABLED)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+paste('min = ', range(df$NUM_OF_DISABLED)[1])
+paste('max = ', range(df$NUM_OF_DISABLED)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_DISABLED)[2] - range(df$NUM_OF_DISABLED)[1], 3))
+
+paste('Дисперсия: Var(NUM_OF_DISABLED) = ', round(var(df$NUM_OF_DISABLED), 3))
+paste('Стандартное отклонение: sd(NUM_OF_DISABLED) = ', round(sd(df$NUM_OF_DISABLED), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_DISABLED))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_DISABLED)*100, 3), '%')
+```
+
+Коэффициент вариации превышает 33%, что говорит о неоднородности взятых значений.
+
+## Количество пенсионеров
+
+### Характеристики центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_ELDERLY), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_ELDERLY))
+paste('Мода: Mo = ', Mode(df$NUM_OF_ELDERLY))
+```
+
+Отметим, что значения среднего и медианы не равны, нельзя говорить о наличии нормального распределения исследуемой переменной. Отметим также, что распределение имеет два модальных значения, что не свойственно для нормального распределения.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_ELDERLY)) 
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_ELDERLY, probs = seq(0, 1, 0.1))) 
+```
+
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_ELDERLY))
+summary(df$NUM_OF_ELDERLY)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+range(df$NUM_OF_DISABLED)
+paste('min = ', range(df$NUM_OF_ELDERLY)[1])
+paste('max = ', range(df$NUM_OF_ELDERLY)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_ELDERLY)[2] - range(df$NUM_OF_ELDERLY)[1], 3))
+
+paste('Дисперсия: Var(NUM_OF_ELDERLY) = ', round(var(df$NUM_OF_ELDERLY), 3))
+paste('Стандартное отклонение: sd(NUM_OF_ELDERLY) = ', round(sd(df$NUM_OF_ELDERLY), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_ELDERLY))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_ELDERLY)*100, 3), '%')
+```
+
+Коэффициент вариации превышает 33%, что говорит о неоднородности распределения.
+
+## Количество разводов
+
+### Характеристики центра:
+
+```{r, echo = FALSE}
+paste('Среднее: ', round(mean(df$NUM_OF_DIVORCES), 3))
+paste('Медиана: Me = ', median(df$NUM_OF_DIVORCES))
+paste('Мода: Mo = ', Mode(df$NUM_OF_DIVORCES)) 
+```
+
+Отметим, что значения среднего, медианы и моды не равны, нельзя говорить о наличии нормального распределения исследуемой переменной.
+
+### Ранговые характеристики:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_DIVORCES)) 
+```
+
+### Децильные группы:
+
+```{r, echo = FALSE}
+pander(quantile(df$NUM_OF_DIVORCES, probs = seq(0, 1, 0.1)))
+```
+
+```{r, echo = FALSE}
+pander(summary(df$NUM_OF_DIVORCES))
+summary(df$NUM_OF_DIVORCES)
+```
+
+### Характеристики разброса:
+
+```{r, echo = FALSE}
+paste('min = ', range(df$NUM_OF_DIVORCES)[1])
+paste('max = ', range(df$NUM_OF_DIVORCES)[2])
+paste('Размах: R = max - min = ', round(range(df$NUM_OF_DIVORCES)[2] - range(df$NUM_OF_DIVORCES)[1], 3))
+
+paste('Дисперсия: Var(NUM_OF_DIVORCES) = ', round(var(df$NUM_OF_DIVORCES), 3))
+paste('Стандартное отклонение: sd(NUM_OF_DIVORCES) = ', round(sd(df$NUM_OF_DIVORCES), 3))
+paste('Межквартильный размах: IQR = Q3 - Q1 = ', IQR(df$NUM_OF_DIVORCES))
+paste('Коэффициент вариации: CV = ', round(CoefVar(df$NUM_OF_DIVORCES)*100, 3), '%')
+```
+
+Коэффициент вариации превышает 33%, переменная неоднородна.
+
+# Диагностика выбросов
+
+##  Расчёт межквартильной разницы (IQR), применение правил 3σ и 1,5IQR, 3IQR для диагностики нетипичных наблюдений
+
+Выведем на экран межквартильный размах IQR каждой из исследуемой величин:
+
+```{r}
+iqrs <- numeric()
+df_nums <- df[,2:10]
+for (cols in colnames(df_nums)) {
+  column <- unlist(df_nums[cols])
+  iqrs <- c(iqrs, IQR(column))
+  cat(cols, round(IQR(column), 2), '\n')
+  }
+```
+
+### Правило 3-х сигм
+
+Количество выбросов, обнаруженных по правилу 3$\sigma$:
+```{r}
+for (cols in colnames(df_nums)) {
+sigma <- sd(df_nums[, cols])
+iqr <-  boxplot.stats(df_nums[, cols])$stats[4] - boxplot.stats(df_nums[, cols])$stats[2]
+outliers_3sigma <- c(df_nums[which(abs(mean(df_nums[, cols]) - df_nums[, cols]) >= 3*sigma), cols])
+cat(cols,": ", length(outliers_3sigma), "\n", sep = "")
+}
+```
+
+### Количество выбросов, обнаруженных по правилу 1.5IQR:
+
+```{r}
+for (cols in colnames(df_nums)) {
+  column <- unlist(df_nums[cols])
+  cat(cols, ":", length(boxplot.stats(column)$out), '\n')
+  }
+```
+
+### Количество выбросов, обнаруженных по правилу 3IQR:
+
+```{r}
+for (cols in colnames(df_nums)) {
+  column <- unlist(df_nums[cols])
+  cat(cols,":", length(boxplot.stats(column, coef = 3)$out), '\n')
+  }
+```
+
+## Построение ящичковых диаграмм
+
+Построим ящичковые диаграммы (boxplots) по каждой из переменной согласно правилу 1.5IQR:
+```{r}
+boxplot(df$NUM_OF_MENT_DIS, ylab = 'NUM_OF_MENT_DIS', col = 'blue')
+```
+
+_Рис. 1 Ящичковая диаграмма переменной Число пациентов с психическими расстройствами, обратившихся в психоневрологические организации_
+
+На построенной ящичковой диаграмме видны пять выбросов сверху (более 125 тыс. пациентов).
+
+```{r}
+boxplot(df$NUM_OF_PSYC_BEDS, ylab = 'NUM_OF_PSYC_BEDS', col = 'green')
+```
+
+_Рис. 2 Ящичковая диаграмма переменной Число коек психиатрических специальностей_
+
+Обнаружили пять выбросов сверху (более 4 тысяч коек психиатрических специальностей).
+
+```{r}
+boxplot(df$NUM_OF_MEDICS, ylab = 'NUM_OF_MEDICS', col = 'green')
+```
+
+_Рис. 3 Ящичковая диаграмма переменной Численность врачей-психиатров_
+
+Пять выбросов сверху (более 250 врачей-психиатров).
+
+```{r}
+boxplot(df$NUM_OF_LOWER_INCOME, ylab = 'NUM_OF_LOWER_INCOME', col = 'red')
+```
+
+_Рис. 4 Ящичковая диаграмма переменной Численность населения с денежными доходами ниже границы бедности (величины прожиточного минимума) в процентах от общей численности населения_
+
+Переменная Численность населения с ден. доходами ниже границы бедности содержит только два выброса сверху (примерно 30% и 35%).
+
+```{r}
+boxplot(df$NUM_OF_UNEMPLOY, ylab = 'NUM_OF_UNEMPLOY', col = 'red')
+```
+
+_Рис. 5 Ящичковая диаграмма переменной Численность безработных в возрасте 15-72 лет_
+
+Видим только два выброса сверху (около 150 безработных).
+
+```{r}
+boxplot(df$NUM_OF_DRUG_ADDICT, ylab = 'NUM_OF_DRUG_ADDICT', col = 'pink')
+```
+
+_Рис. 6 Ящичковая диаграмма переменной Число пациентов с синдромом зависимости от наркотических веществ_
+
+У показателя Число пациентов с синдромом зависимости от наркотических веществ выбросы снизу отсутсвуют. Наблюдается множество аномальных значений сверху (около 8).
+
+```{r}
+boxplot(df$NUM_OF_DISABLED, ylab = 'NUM_OF_DISABLED', col = 'pink')
+```
+
+_Рис. 7 Ящичковая диаграмма переменной Численность инвалидов_
+
+Показатель Численность инвалидов содержит три выброса сверху.
+
+```{r}
+boxplot(df$NUM_OF_ELDERLY, ylab = 'NUM_OF_ELDERLY', col = 'pink')
+```
+
+_Рис. 8 Ящичковая диаграмма переменной Число пенсионеров_
+
+На диаграмме видно, что аномально много пенсионеров (более 1,2 млн человек) в пяти регионах страны.
+
+```{r}
+boxplot(df$NUM_OF_DIVORCES, ylab = 'NUM_OF_DIVORCES', col = 'pink')
+```
+
+_Рис. 9 Ящичковая диаграмма переменной Количество разводов_
+
+Boxplot позволяет обнаружить у переменной Количество разводов на 1 тыс. человек около 5 выбросов сверху (более 20 тысяч разводов).
+
+## Проверка гипотезы о наличии аномальных наблюдений с помощью критерия Граббса/Рознера
+
+### Тест Граббса 
+
+Позволяет определить, является ли наибольшее или наименьшее значение в наборе данных выбросом. Он обнаруживает по одному выбросу за раз (максимальное или минимальное значение).
+
+Как и в любом статистическом тесте, если значение P меньше порогового уровня статистической значимости (обычно α = 0.05), то нулевая гипотеза отвергается, и мы приходим к выводу, что наименьшее/наибольшее значение является отклонением. Напротив, если значение P больше или равно пороговому уровню значимости, нулевая гипотеза не отвергается, и мы делаем вывод, что на основе данных о том, что наименьшее/наибольшее значение не является выбросом.
+
+```{r}
+ for (cols in colnames(df_nums)) {
+  test1 <- grubbs.test(df_nums[, cols])
+  cat(cols, ": ",test1$p.value,"\n", sep=" ")
+}
+```
+
+Проведенный тест Граббса дает право утверждать, что в выборке присутствует большое количество выбросов. Значения p-value для всех наблюдений меньше уровня значимости 5%, что позволяет отвергнуть нулевую гипотезу о том, что выбросов в выборке нет.
+
+### Тест Рознера
+
+Воспользуемся тестом Рознера, Он используется для одновременного обнаружения нескольких выбросов (в отличие от теста Граббса, который должен выполняться итеративно для выявления нескольких выбросов).
+
+Он разработан чтобы избежать проблемы, когда выброс, близкий по значению к другому выбросу, может остаться незамеченным.
+
+```{r}
+for (cols in colnames(df_nums)) {
+  test2 <- rosnerTest(df_nums[, cols], k = 1)
+  cat(cols, ": ",test2$all.stats$Outlier,"\n", sep=" ")
+}
+```
+
+Тест Рознера работает с большими выборками и позволяет определить наличие или отсутствие сразу нескольких выбросов. В данном случае тест Рознера также подтвердил наличие выбросов в выборке.
+
+Примем значение $coef=1$, поскольку оно позволяет удалить абсолютно все выбросы в выборке (значения больше единицы оставляют выбросы в некоторых переменных).
+
+Выведем на экран регионы, которые содержат выбросы по правилу 1IQR:
+```{r}
+df_nums <- df[,2:10]
+lines <- c() #создадим вектор, в который будем записывать номера строк, содержащие выбросы
+df_without_blowouts <- df_nums #создадим датафрейм, который в резльтате работы кода, будет содержать данные без выбросов
+for (cols in colnames(df_without_blowouts)) {
+  outliers_1iqr <- boxplot.stats(df_without_blowouts[, cols], coef = 1)$out #в цикле будем записывать в этот вектор выбросы
+  num_of_outs <- length(boxplot.stats(df_without_blowouts[, cols], coef = 1)$out) #а сюда - количество выбросов в переменной
+  if (num_of_outs > 0) { #код далее работает только если переменная реально содержит выбросы
+    for (i in c(1:num_of_outs)) { # цикл повторится столько раз, сколько выбросов содержит переменная
+      lines <- c(lines, which( df_without_blowouts[,cols] == outliers_1iqr[i])) #запишем номера строк с выбросами
+    }
+  }
+}
+lines <- sort(lines) #отсортируем
+lines_2 <- c() #создадим еще один вектор, в который запишем номера строк без дубликатов
+for (i in c(1:(length(lines) - 1))) {
+  if (lines[i] != lines[i + 1]) { #если данный элемент не равен следующему
+    lines_2 <- c(lines_2, lines[i]) #дозапишем его в новый вектор
+  }
+}
+lines_2 <- c(lines_2, lines[length(lines)]) #добавим последнее значение
+print(df[lines_2, 1]) #выведем названия регионов, которые содержат выбросы
+```
+
+Удалим строки, соответствующие регионам, которые содержат выбросы:
+```{r}
+df_without_blowouts <- cbind(df[1], df_without_blowouts, df[11]) #добавим столбец с названиями регионов и федеральных округов
+df_without_blowouts <- df_without_blowouts[-lines_2,]
+```
+
+Структура исходных данных:
+```{r}
+str(df)
+```
+
+Структура данных после удаления выбросов:
+```{r}
+str(df_without_blowouts)
+```
+
+Снова проведем тест Рознера:
+```{r}
+df_nums_without_blowouts <- df_without_blowouts[,2:10]
+for (cols in colnames(df_nums_without_blowouts)) {
+  test2 <- rosnerTest(df_nums_without_blowouts[, cols], k = 1)
+  cat(cols, ": ",test2$all.stats$Outlier,"\n", sep=" ")
+}
+```
+
+Тест подтверждает отсутствие выбросов в новой выборке везде, кроме NUM_OF_DRUG_ADDICT.
+
+# Проверка соответствия эмпирического распределения нормальному закону
+
+## Графики dotplots
+
+Построим точечные графики (dotplots) для всех исследуемых переменных. В отличие от гистограмм, они отображают отдельные значения данных вдоль оси x и используют точки для представления частот каждого отдельного значения. Гистограммы же отображают диапазоны данных по оси x и используют прямоугольные столбцы для представления частоты значений, попадающих в каждый диапазон.
+```{r}
+names_of_cols <- colnames(df_nums)
+for (i in c(1:length(df_nums))) {
+  if (names_of_cols[i] == 'NUM_OF_MENT_DIS') { colr = 'blue'}
+  if ((names_of_cols[i] == 'NUM_OF_PSYC_BEDS') | (names_of_cols[i] == 'NUM_OF_MEDICS'))  { colr = 'green'}
+  if ((names_of_cols[i] == 'NUM_OF_LOWER_INCOME') | (names_of_cols[i] == 'NUM_OF_UNEMPLOY'))  { colr = 'red'}
+  if ((names_of_cols[i] == 'NUM_OF_DRUG_ADDICT') | (names_of_cols[i] == 'NUM_OF_DISABLED') | (names_of_cols[i] == 'NUM_OF_ELDERLY') | (names_of_cols[i] == 'NUM_OF_DIVORCES'))  { colr = 'pink'}
+  stripchart(df_nums[,i], method = "stack", offset = .5, at = 0, pch = 20, cex=3,
+ col = colr, main = "Dot Plot",
+ xlab = names_of_cols[i], ylab="Частота")
+}
+```
+
+Поскольку многие переменные не содержат повторяющиеся значения, графики dotplots для нас малоинформативны. Воспользуемся гистограммами с наложением плотности нормального распределения:
+
+## Гистограммы и коэффициенты асимметрии и эксцесса
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_MENT_DIS)) + 
+  geom_histogram(aes(y=..density..), color = "black", fill = "blue") + 
+  geom_line(aes(x = df$NUM_OF_MENT_DIS, y = dnorm(df$NUM_OF_MENT_DIS, mean = mean(df$NUM_OF_MENT_DIS), sd = sd(df$NUM_OF_MENT_DIS))), lwd = 1, col = 'green') +
+  ylab("Частота") +
+  xlab("Число пациентов с псих. расстройствами, обратившихся в психоневрологические организации")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_MENT_DIS), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_MENT_DIS), 3))
+```
+
+Коэффициент асимметрии больше нуля и по модулю больше 0,5, асимметрия существенная правосторонняя. Коэффициент эксцесса положителен, следовательно, распределение островершинное.
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_PSYC_BEDS)) + 
+  geom_histogram(aes(y=..density..), color = "black", fill = "green") + 
+  geom_line(aes(x = df$NUM_OF_PSYC_BEDS, y = dnorm(df$NUM_OF_PSYC_BEDS, mean = mean(df$NUM_OF_PSYC_BEDS), sd = sd(df$NUM_OF_PSYC_BEDS))), lwd = 1, col = 'orange') +
+  ylab("Частота") +
+  xlab("Число коек психиатрических специальностей")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_PSYC_BEDS), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_PSYC_BEDS), 3))
+```
+
+Коэффициент асимметрии больше нуля и по модулю больше 0,5, асимметрия существенная правосторонняя. Коэффициент эксцесса положителен, следовательно, распределение островершинное.
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_MEDICS)) + 
+  geom_histogram(aes(y=..density..), color = "black", fill = "green") + 
+  geom_line(aes(x = df$NUM_OF_MEDICS, y = dnorm(df$NUM_OF_MEDICS, mean = mean(df$NUM_OF_MEDICS, na.rm = TRUE), sd = sd(df$NUM_OF_MEDICS, na.rm = TRUE))), lwd = 1, col = 'orange') +
+  ylab("Частота") +
+  xlab("Количество врачей-психиатров")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_MEDICS, na.rm = TRUE), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_MEDICS, na.rm = TRUE), 3))
+```
+Коэффициент эксцесса равен $29.599$, его положительное значение означает, что распределение островершинное. Коэффициент асимметрии равен $4.905$ - это говорит о том, что асимметрия существенная правосторонняя.
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_LOWER_INCOME)) + 
+  geom_histogram(aes(y=..density..), color = "black", fill = "red") + 
+  geom_line(aes(x = df$NUM_OF_LOWER_INCOME, y = dnorm(df$NUM_OF_LOWER_INCOME, mean = mean(df$NUM_OF_LOWER_INCOME), sd = sd(df$NUM_OF_LOWER_INCOME))), lwd = 1, col = 'black') +
+  ylab("Частота") +
+  xlab("Численность населения с денежными доходами ниже границы бедности в процентах от общей численности населения")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_LOWER_INCOME), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_LOWER_INCOME), 3))
+```
+
+Коэффициент асимметрии больше нуля и по модулю больше 0,5, асимметрия существенная правосторонняя. Коэффициент эксцесса положителен, следовательно, распределение островершинное. 
+
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_UNEMPLOY)) + 
+  geom_histogram(aes(y=..density..), color = "black", fill = "red") + 
+  geom_line(aes(x = df$NUM_OF_UNEMPLOY, y = dnorm(df$NUM_OF_UNEMPLOY, mean = mean(df$NUM_OF_UNEMPLOY, na.rm = TRUE), sd = sd(df$NUM_OF_UNEMPLOY, na.rm = TRUE))), lwd = 1, col = 'black') +
+  ylab("Частота") +
+  xlab("Количество безработных в возрасте 15-72 лет")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_UNEMPLOY, na.rm = TRUE), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_UNEMPLOY, na.rm = TRUE), 3))
+```
+Коэффициент эксцесса равен $1.517$, его положительное значение означает, что распределение островершинное. Коэффициент асимметрии равен $1.305$ - это говорит о том, что асимметрия существенная правосторонняя.
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_DRUG_ADDICT)) + 
+  geom_histogram(aes(y=..density..), color = "pink", fill = "magenta") + 
+  geom_line(aes(x = df$NUM_OF_DRUG_ADDICT, y = dnorm(df$NUM_OF_DRUG_ADDICT, mean = mean(df$NUM_OF_DRUG_ADDICT), sd = sd(df$NUM_OF_DRUG_ADDICT))), lwd = 1, col = 'black') +
+  ylab("Частота") +
+  xlab("Число пациентов с синдромом зависимости от наркотических веществ")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_DRUG_ADDICT), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_DRUG_ADDICT), 3))
+```
+
+Коэффициент асимметрии больше нуля и по модулю больше 0,5, асимметрия существенная правосторонняя. Коэффициент эксцесса положителен, следовательно, распределение островершинное. 
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_DISABLED)) + 
+  geom_histogram(aes(y=..density..), color = "pink", fill = "magenta") + 
+  geom_line(aes(x = df$NUM_OF_DISABLED, y = dnorm(df$NUM_OF_DISABLED, mean = mean(df$NUM_OF_DISABLED), sd = sd(df$NUM_OF_DISABLED))), lwd = 1, col = 'black') +
+  ylab("Частота") +
+  xlab("Численность инвалидов")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_DISABLED), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_DISABLED), 3))
+```
+
+Коэффициент асимметрии положителен и по модулю больше 0.5, имеет место существенная правосторонняя асимметрия. Коэффициент эксцесса положительный, распределение островершиннное.
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_ELDERLY)) + 
+  geom_histogram(aes(y=..density..), color = "pink", fill = "magenta") + 
+  geom_line(aes(x = df$NUM_OF_ELDERLY, y = dnorm(df$NUM_OF_ELDERLY, mean = mean(df$NUM_OF_ELDERLY), sd = sd(df$NUM_OF_ELDERLY))), lwd = 1, col = 'black') +
+  ylab("Частота") +
+  xlab("Численность пенсионеров")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_ELDERLY), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_ELDERLY), 3))
+```
+
+Коэффициент асимметрии положителен, имеет место существенная правосторонняя асимметрия. Коэффициент эксцесса положительный, распределение островершиннное.
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = df$NUM_OF_DIVORCES)) + 
+  geom_histogram(aes(y=..density..), color = "pink", fill = "magenta") + 
+  geom_line(aes(x = df$NUM_OF_DIVORCES, y = dnorm(df$NUM_OF_DIVORCES, mean = mean(df$NUM_OF_DIVORCES), sd = sd(df$NUM_OF_DIVORCES))), lwd = 1, col = 'black') +
+  ylab("Частота") +
+  xlab("Количество разводов")
+```
+
+```{r, echo = FALSE}
+paste('Коэффициент асимметрии: As = ', round(Skew(df$NUM_OF_DIVORCES), 3))
+paste('Коэффициент эксцесса: Ek = ', round(Kurt(df$NUM_OF_DIVORCES), 3))
+```
+
+Коэффициент асимметрии положителен, имеет место существенная правосторонняя асимметрия. Коэффициент эксцесса положительный, распределение островершиннное.
+
+## Проверка гипотезы о нормальности распределения с помощью тестов Пирсона, Лиллиефорса (Колмогорова-Смирнова) и Шапиро-Уилка
+
+Проверим изучамые переменные на нормальный закон на уровне значимости $\alpha=0.01$.
+
+Критерий Пирсона - один из наиболее распространенных критериев согласия, применяемый при условии достаточно большого объема выборки (не менее 50 наблюдений). Как свидетельствуют результаты научных исследований, показывает достаточно неплохие результаты по сравнению с другими критериями, при этом очень прост и понятен в реализации.
+
+Тест Колмогорова – Смирнова корректно применим только когда точно известны параметры теоретического распределения. Т.к. это на практике редко случается, и параметры обычно оцениваются по выборке, а также т.к. согласно научным исследованиям тест обладает малой мощностью, сейчас обычно используется модификация теста Колмогорова-Смирнова – критерий Лиллиефорса.
+
+Тест Шапиро-Уилка является распространенным тестом на нормальность выборки и обладает, согласно последним научным исследованиям, наибольшей мощностью среди критериев нормальности, особенно для проверки асимметричных распределений.
+
+### Число пациентов с психическими расстройствами, обратившихся в психоневрологические организации до удаления выбросов
+
+#### Критерий Пирсона
+
+```{r}
+pearson.test(df_nums$NUM_OF_MENT_DIS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MENT_DIS отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums$NUM_OF_MENT_DIS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MENT_DIS отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_MENT_DIS)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MENT_DIS отвергается. 
+
+Все тесты отвергли гипотезу о нормальном распределении числа пациентов с психическими расстройствами, обратившихся в психоневрологические организации на уровне значимости $\alpha=0.01$.
+
+### Число пациентов с психическими расстройствами, обратившихся в психоневрологические организации после удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_MENT_DIS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MENT_DIS не отвергается.
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_MENT_DIS)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MENT_DIS отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_MENT_DIS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MENT_DIS отвергается. 
+
+После удаления выбросов результат изменился. Только два теста отвергли гипотезу о нормальном распределении числа пациентов с психическими расстройствами, обратившихся в психоневрологические организации на уровне значимости $\alpha=0.01$.
+
+### Число коек психиатрических специальностей до удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums$NUM_OF_PSYC_BEDS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_PSYC_BEDS отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums$NUM_OF_PSYC_BEDS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_PSYC_BEDS отвергается.
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_PSYC_BEDS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_PSYC_BEDS отвергается. 
+
+В трех тестах гипотеза о нормальном распределении числа коек психиатрических специальностей отверглась на уровне значимости $\alpha=0.01$.
+
+### Число коек психиатрических специальностей после удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_PSYC_BEDS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_PSYC_BEDS не отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_PSYC_BEDS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_PSYC_BEDS не отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_PSYC_BEDS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_PSYC_BEDS не отвергается.
+
+После удаления выбросов результат изменился. Ни одна гипотеза о нормальном распределении числа коек психиатрических специальностей не отверглась на уровне значимости $\alpha=0.01$.
+
+### Численность врачей-психиатров до удаления выбросов 
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums$NUM_OF_MEDICS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MEDICS отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums$NUM_OF_MEDICS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MEDICS отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_MEDICS)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MEDICS отвергается. 
+
+Таким образом, все тесты отвергают гипотезу о нормальном распределении численности врачей-психиатров до удаления выбросов на уровне значимости $\alpha=0.01$.
+
+### Численности врачей-психиатров после удаления выбросов
+
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_MEDICS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MEDICS не отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_MEDICS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MEDICS не отвергается. 
+
+#### Критерий Шапиро-Уилка
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_MEDICS)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_MEDICS не отвергается.
+
+После удаления выбросов ни один тест не отвергает гипотезу о нормальном распределении численности врачей-психиатров на уровне значимости $\alpha=0.01$.
+
+### Численность населения с денежными доходами ниже границы бедности (величины прожиточного минимума) в процентах от общей численности населения до удаления выбросов 
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums$NUM_OF_LOWER_INCOME)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_LOWER_INCOME отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums$NUM_OF_LOWER_INCOME)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_LOWER_INCOME отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_LOWER_INCOME)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_LOWER_INCOME отвергается. 
+
+Таким образом, все тесты отвергают гипотезу о нормальном распределении численности населения с денежными доходами ниже границы бедности (величины прожиточного минимума) в процентах от общей численности населения на уровне значимости $\alpha=0.01$.
+
+### Численность населения с денежными доходами ниже границы бедности (величины прожиточного минимума) в процентах от общей численности населения после удаления выбросов 
+
+#### Критерий Пирсона 
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_LOWER_INCOME)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_LOWER_INCOME не отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_LOWER_INCOME)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_LOWER_INCOME не отвергается. 
+
+#### Критерий Шапиро-Уилка
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_LOWER_INCOME)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_LOWER_INCOME не отвергается.
+
+После удаления выбросов ни один тест не отвергает гипотезу о нормальном распределении численности населения с денежными доходами ниже границы бедности (величины прожиточного минимума) в процентах от общей численности населения после выбросов на уровне значимости $\alpha=0.01$.
+
+### Численность безработных в возрасте 15-72 лет до удаления выбросов
+
+#### Критерий Пирсона
+
+```{r}
+pearson.test(df_nums$NUM_OF_UNEMPLOY)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_UNEMPLOY отвергается.
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums$NUM_OF_UNEMPLOY)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_UNEMPLOY отвергается.
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_UNEMPLOY)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_UNEMPLOY отвергается. 
+
+Каждый из проведенных нами тестов отвергает гипотезу о нормальном распределении числа безработных в возрасте 15-72 лет на уровне значимости $\alpha=0.01$.
+
+
+### Численность безработных в возрасте 15-72 лет после удаления выбросов
+
+#### Критерий Пирсона
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_UNEMPLOY)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_UNEMPLOY отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_UNEMPLOY)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_UNEMPLOY отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_UNEMPLOY)
+```
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_UNEMPLOY отвергается. 
+
+Удаление выбросов никак не повлияло на результаты тестов на соответствие переменной нормальному закону: и до, и после удаления выбросов гипотеза о нормальном распределении отвергается во всех случаях.
+
+### Число пациентов с синдромом зависимости от наркотических веществ до удаления выбросов
+
+#### Критерий Пирсона
+
+```{r}
+pearson.test(df_nums$NUM_OF_DRUG_ADDICT)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DRUG_ADDICT отвергается.
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums$NUM_OF_DRUG_ADDICT)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DRUG_ADDICT отвергается.
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_DRUG_ADDICT)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DRUG_ADDICT отвергается.
+
+Таким образом, каждый из проведенных тестов отвергает гипотезу о нормальном распределении числа пациентов с синдромом зависимости от наркотических веществ на уровне значимости $\alpha=0.01$.
+
+### Число пациентов с синдромом зависимости от наркотических веществ после удаления выбросов
+
+#### Критерий Пирсона
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_DRUG_ADDICT)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DRUG_ADDICT отвергается.
+
+#### Критерий Колмогорова-Смирнова
+
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_DRUG_ADDICT)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DRUG_ADDICT отвергается.
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_DRUG_ADDICT)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DRUG_ADDICT отвергается.
+
+В данном случае видим, что удаление выбросов никак не повлияло на работу тестов.
+
+### Численность инвалидов до удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums$NUM_OF_DISABLED)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DISABLED отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums$NUM_OF_DISABLED)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DISABLED отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_DISABLED)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DISABLED отвергается. 
+
+Таким образом, все три проведенных теста отвергают гипотезу о нормальном распределении численности инвалидов на уровне значимости $\alpha=0.01$.
+
+### Численность инвалидов после удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_DISABLED)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DISABLED не отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_DISABLED)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DISABLED не отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_DISABLED)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DISABLED отвергается.
+
+В данном случае видим, что после удаления выбросов только один тест отверг гипотезу о нормальном распределении переменной.
+
+### Численность пенсионеров до удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums$NUM_OF_ELDERLY)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_ELDERLY отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums$NUM_OF_ELDERLY)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_ELDERLY отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_ELDERLY)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_ELDERLY отвергается. 
+
+Таким образом, каждый из проведенных тестов отвергает гипотезу о нормальном распределении числа пенсионеров на уровне значимости $\alpha=0.01$.
+
+### Численность пенсионеров после удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_ELDERLY)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_ELDERLY не отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_ELDERLY)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_ELDERLY отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_ELDERLY)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_ELDERLY отвергается. 
+
+В данном случае видим, что после удаления выбросов по критерию Пирсона гипотеза не отверглась, в остальных случаях удаление выбросов никак не повлияло на результаты тестов на соответствие переменной нормальному закону, гипотезы отверглись.
+
+### Количество разводов до удаления выбросов
+
+#### Критерий Пирсона 
+
+```{r}
+pearson.test(df_nums$NUM_OF_DIVORCES)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DIVORCES отвергается. 
+
+#### Критерий Колмогорова-Смирнова
+```{r}
+lillie.test(df_nums$NUM_OF_DIVORCES)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DIVORCES отвергается. 
+
+#### Критерий Шапиро-Уилка
+
+```{r}
+shapiro.test(df_nums$NUM_OF_DIVORCES)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DIVORCES отвергается. 
+
+Таким образом, все три теста однозначно отвергли гипотезу о нормальном распределении количества разводов.
+
+### Количество разводов после удаления выбросов
+
+```{r}
+pearson.test(df_nums_without_blowouts$NUM_OF_DIVORCES)
+```
+
+$p-value>0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DIVORCES не отвергается. 
+
+```{r}
+lillie.test(df_nums_without_blowouts$NUM_OF_DIVORCES)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DIVORCES отвергается. 
+
+```{r}
+shapiro.test(df_nums_without_blowouts$NUM_OF_DIVORCES)
+```
+
+$p-value<0.01 =>$ гипотеза о нормальном распределения переменной NUM_OF_DIVORCES отвергается.
+
+После удаления выбросов только два теста отвергли гипотезу о нормальном распределении исследуемой переменной на уровне значимости $\alpha=0.01$.
+
+### Выводы
+
+На уровне значимости $\alpha=0.01$:
+
+1. Гипотеза о том, что все исследуемые переменные подчинены нормальному закону до удаления выбросов отвергается;
+
+2. Один тест из трех не отвергает гипотезу о том, что переменные NUM_OF_MENT_DIS, NUM_OF_DIVORCES подчинены нормальному закону после удаления выбросов;
+ 
+3. Два теста из трех не отвергают гипотезу о том, что переменная NUM_OF_DISABLED подчинена нормальному закону после удаления выбросов;
+
+4. Ни один тест не отвергает гипотезу о том, что переменные NUM_OF_PSYC_BEDS, NUM_OF_MEDICS, NUM_OF_LOWER_INCOME и NUM_OF_ELDERLY подчинены нормальному закону после удаления выбросов;
+
+5. Гипотеза о том, что переменные NUM_OF_UNEMPLOY, NUM_OF_DRUG_ADDICT распределены по нормальному закону отвергается и до, и после удаления выбросов.
+
+# Корреляционный анализ
+
+## Построение полей корреляции до удаления выбросов
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_PSYC_BEDS', y = 'NUM_OF_MENT_DIS', col = 'green')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_MEDICS', y = 'NUM_OF_MENT_DIS', col = 'green')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_LOWER_INCOME', y = 'NUM_OF_MENT_DIS', col = 'red')
+```
+
+Между переменными наблюдается обратная зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_UNEMPLOY', y = 'NUM_OF_MENT_DIS', col = 'red')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_DRUG_ADDICT', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_DISABLED', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_ELDERLY', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+```{r}
+ggscatter(df_nums, x = 'NUM_OF_DIVORCES', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость.
+
+## Построение полей корреляции после удаления выбросов
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_PSYC_BEDS', y = 'NUM_OF_MENT_DIS', col = 'green')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_MEDICS', y = 'NUM_OF_MENT_DIS', col = 'green')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_LOWER_INCOME', y = 'NUM_OF_MENT_DIS', col = 'red')
+```
+
+Между переменными отсутствует линейная зависимость после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_UNEMPLOY', y = 'NUM_OF_MENT_DIS', col = 'red')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_DRUG_ADDICT', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_DISABLED', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_ELDERLY', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+```{r}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_DIVORCES', y = 'NUM_OF_MENT_DIS', col = 'pink')
+```
+
+Между переменными наблюдается прямая зависимость, даже после удаления выбросов.
+
+## Матрица парных коэффициентов корреляции
+
+### Матрица парных коэффициентов корреляции до удаления выбросов
+
+Построим корреляционную матрицу для всех количественных переменных.
+
+```{r}
+cor_m1 <- cor(df_nums, method = "pearson")
+cor_m1[,1:9]
+```
+
+Некоторые значения положительны, некоторые отрицательны. Это говорит о разных направлениях связи, т.е. некоторые признаки прямо зависят друг от друга, некоторые --- обратно. К примеру, коэффициент корреляции между количеством пациентов, обратившихся в психоневрологические диспансеры и численностью населения с денежными доходами ниже границы бедности имеет знак минус, что говорит об обратной связи между рассматриваемыми признаками. Корреляция отрицательная (обратная), если изменение одной величины приводит противоположному изменению другой. Соответственно, знак плюс перед коэффициентом говорит о прямой связи (например, количество пациентов, обративщихся в психоневрологические диспансеры и количество разводов).
+
+Теперь рассмотрим сами значения коэффициентов (по модулю). Значения от 0 до 0,2 называют очень слабой связью, от 0,2 до 0,3 --- слабой, от 0,3 до 0,5 --- умеренной, от 0,5 до 0,8 --- средней, от 0,8 до 1 --- сильной. При значении 0 связь между признаками отсутствует. Значения получаются слишком разные, общую тенденцию не получается установить. Для удобства восприятия представим корреляционную матрицу в виде графика, где размер и цвет обозначают направление и силу связи.
+
+```{r}
+corrplot.mixed(cor(df_nums), lower.col = 'black', upper = 'circle', number.cex = 0.5, tl.pos = 'lt', 
+               tl.cex = 0.5, tl.col = 'black')
+```
+
+### Матрица парных коэффициентов корреляции после удаления выбросов
+
+```{r}
+cor_m2 <- cor(df_nums_without_blowouts, method = "pearson")
+cor_m2[,1:9] 
+```
+
+После удаления выбросов явно наблюдается общее ослабление связи, небольшое количество связей усилилось.
+
+```{r}
+corrplot.mixed(cor(df_nums_without_blowouts), lower.col = 'black', upper = 'circle', number.cex = 0.5, tl.pos = 'lt', 
+               tl.cex = 0.5, tl.col = 'black')
+```
+
+Это видно наглядно и на графике.
+
+## Проверка значимости коэффициента корреляции
+
+### До удаления выбросов
+
+```{r}
+res <- cor.mtest(df_nums, conf.level = 0.95)
+corrplot(cor(df_nums), p.mat = res$p, sig.level = 0.05, tl.col = "black", tl.srt = 45, tl.cex = 0.5) 
+```
+
+До удаления выбросов один парный коэффициент корреляции не являются статистически значимым: переменная NUM_OF_UNEMPLOY --- с переменной NUM_OF_LOWER_INCOME.
+
+### После удаления выбросов
+
+```{r}
+res <- cor.mtest(df_nums_without_blowouts, conf.level = 0.95)
+corrplot(cor(df_nums_without_blowouts), p.mat = res$p, sig.level = 0.05, tl.col = "black", tl.srt = 45, tl.cex = 0.5) 
+```
+
+После удаления выбросов практически все парные коэффициенты корреляции для переменной NUM_OF_LOWER_INCOME стали незначимыми. Исключение составляет коэффициент корреляции с переменной NUM_OF_UNEMPLOY.
+
+## Построение доверительных интервалов для значимых парных коэффициентов корреляции
+
+### До удаления выбросов
+
+С помощью функции cor.mtest выведем границы доверительных интервалов для всех парных коэффициентов:
+
+```{r}
+cor.mtest(cor_m1, conf.level = 0.05)
+```
+
+Рассмотрим только границы значимых коэффициентов. LowCI означает нижнюю границу доверительного интервала, а uppCI - верхнюю. Существует только 5% вероятность, того, что значимые коэффициенты корреляции находятся за пределами найденных нами 95% доверительных интервалов для них.
+
+Все коэффициенты значимы, кроме коэффициента корреляции NUM_OF_LOWER_INCOME с NUM_OF_UNEMPLOY, т. к. в его доверительный интервал попадает нулевое значение.
+
+### После удаления выбросов
+
+Снова выводим границы доверительных интервалов для всех коэффициентов корреляции:
+
+```{r}
+cor.mtest(cor_m2, conf.level = 0.05)
+```
+
+Смысл границ значимых коэффициентов корреляции после удаления выбросов тот же: существует только 5% вероятность того, что коэффциент будет меньше  lowCI и больше uppCI.
+
+Все коэффициенты значимы, кроме коэффициентов корреляции NUM_OF_LOWER_INCOME с остальными переменными, т. к. в их доверительные интервалы попадает 0.
+
+## Построение и интерпретация матрицы частных коэффициентов корреляции до удаления выбросов 
+```{r}
+correlation1 <- pcor(df_nums)
+print(correlation1)
+```
+Интерпретация:
+
+Как мы видим, значения парных и частных коэффициентов корреляции отличаются. Это связано с тем, что в первом случае мы рассматривали коэффициент корреляции Пирсона, который действительно показывает нам взаимозавимость переменных, однако бывают ситуации, когда одна величина коррелирована с другой, но это может быть всего лишь отражение того, что они обе коррелированы с некоторой третьей величиной или с множеством величин, которые не поддаются прямому анализу, но все равно учитываются при расчетах. Во втором случае частный коэффициент корреляции это взаимозависимость исключительно двух случайных величин.
+
+В данном случае мы видим, что самая большая корреляция при построении матрицы частных коэффициентов корреляции наблюдается межжду (NUM_OF_DISABLED   и  NUM_OF_MEDICS) = 0.707. Также необходимо заметить, что количество отрицательно направленных связей сильно увеличилось, что свидетельствует о том, что признаки оказывают сильно влияние друг на друга при взаимодействии. 
+
+
+Проверим значения p-value отдельной функцией 
+```{r}
+correlation1$p.value
+```
+
+Все значения совпадают. 
+
+
+Рассчитаем количество значимых значений 
+```{r}
+table(correlation1$p.value <= 0.05)
+```
+
+Вывод: до удаления выбросов отвергается 37 значений на уровне значимости $p-value = 0,05$.
+
+### Построение доверительных интервалов до удаления выбросов 
+
+```{r}
+cor.mtest(correlation1$e, conf.level = 0.05)
+```
+Как мы видим, все значения доверительного интервала не включают нулевые значения, что подтверждает значимость выбранных признаков. 
+
+### Построение и интерпретация матрицы частных коэффициентов корреляции после удаления выбросов 
+
+```{r}
+correlation <-pcor(df_nums_without_blowouts)
+print(correlation)
+```
+Как мы видим, после удаления выбросов значения коэффициентов частных корреляций изменились, в некторых местах связь стала немного слабее. В некоторых и вовсе поменяла свое направление, что свидетельствует о влиянии удаленных значений на корреляцию между признаками.
+
+Проверим значения p-value отдельной функцией 
+
+```{r}
+correlation$p.value
+```
+Все значения совпадают. 
+
+Рассчитаем количество значимых значений
+```{r}
+table(correlation$p.value <= 0.05)
+```
+
+Вывод: После удаления выбросов мы зафиксировали 27 значений, которые явно отвергаются, этот факт свидетельствует о том, что количество значимых признаков увеличилось.
+
+### Построение доверительных интервалов после удаления выбросов 
+
+```{r}
+cor.mtest(correlation$e, conf.level = 0.05)
+```
+Все значения доверительного интервала не включают нулевые значения, что подтверждает значимость выбранных признаков.
+
+## Сравнение парных и частных коэффициентов корреляции, выводы
+
+Парный коэффициент корреляции показывает тесноту связи между двумя показателями на фоне действия остальных, в то время как частный характеризует взаимосвязь этих показателей при исключенном влиянии остальных. У нас наглядно видно, что почти все парные коэффициенты корреляции по модулю больше частных. Это значит, что остальные элементы усиливают связь между парой показателей, побочно влияя на нее. По этой же причине, из-за влияния побочных коэффициентов, в матрице парных коэффициентов и частных может быть разное направление зависимостей двух переменных, положительное направление может смениться отрицательным. Рассмотрим показательные случаи, которые лучше всего характеризуют данное описание.
+
+В рассматриваемых нами данных мы видим, что самая большая корреляция при построении матрицы парных коэффициентов корреляции наблюдается межжду (NUM_OF_ELDERLY  и  NUM_OF_DIVORCES) = 0.983. Однако, построив матрицу частных коэффициентов корреляции, получаем, что связь стала значительно слабее = 0.702. Рассмотрим изменение направления связи между такими признакими, как (NUM_OF_DIVORCES и NUM_OF_UNEMPLOY), где парный коэффициент корреляции = 0.656, однако частный коэффициент корреляции между этими признаками = -0.216. Это свидетельствует о том, что конкретно между двумя этими признаками положительной корреляции не наблюдается, но при взаимодействии с другими признакми отражается положительная и причем значительная корреляция.
+
+## Расчёт множественного коэффициента корреляции и проверка его значимости
+
+### До удаления выбросов
+
+Для дальнейших вычислений будем использовать матрицу парных коэффициентов корреляции посчитанную ранее до удаления выбросов.
+
+```{r}
+cor_vec1 <- c(1:ncol(df_nums)) #ncol считает столбцы
+```
+
+Посчитаем множественные коэффициенты корреляции
+
+```{r}
+for (i in cor_vec1) {
+  det_cor_m1 <- det(cor_m1) 
+  algebraic_add1 <- (-1)^(i + i)*det(cor_m1[-i, -i])  
+  cor_vec1[i] = sqrt(1 - det_cor_m1 / algebraic_add1)
+}
+cor_vec1 
+```
+
+Коэффициент множественной корреляции указывает на силу и направление связи между зависимой переменной и набором независимых переменных. Чем ближе значение коэффициента к 1, тем сильнее связь между переменными. 
+
+Исходя из данного списка коэффициентов множественной корреляции, можем сделать следующие выводы:
+
+- Наиболее сильная связь (близкая к функциональной) с перечнем исследуемых переменных наблюдается у переменных NUM_ELDERLY (коэффициент множественной корреляции -- 0.9937), NUM_OF_DIVORCES (0.9925), NUM_OF_DISABLED (0.9807).
+
+- Также достаточно сильная связь с набором переменных наблюдается у признаков NUM_OF_MEDICS (0.9782), NUM_OF_MENT_DIS (0.963), NUM_OF_PSYC_BEDS (0.9575).
+
+- Наименее сильная связь наблюдается у переменных NUM_OF_UNEMPLOY (0.9199) NUM_OF_DRYG_ADDICT (0.8851), NUM_OF_LOWER_INCOME (0.5802). 
+
+Теперь найдем наблюдаемые значения:
+```{r}
+F_vec1 <- c( )
+for (i in cor_vec1) {
+  Fnabl_1 = (i^2 * 1/(9-1))/((1 - i^2)*1/(85 * 9 - 9))
+  F_vec1 <- append( F_vec1, Fnabl_1)
+}
+F_vec1
+```
+
+Значение Fкр по статистическим таблицам равно Fкр(0,05; 8; 756) = 1.94
+
+Множественный коэффициент корреляции является значимым, если наблюдаемое значение F больше Fкр. В нашем случае, абсолютно все значения Fнабл превашывают Fкр, то есть все коэффициенты являются значимыми.
+
+### После удаления выбросов
+
+Теперь для вычислений будем использовать матрицу парных коэффициентов корреляции после удаления выбросов:
+```{r}
+cor_vec2 <- c(1:ncol(df_nums_without_blowouts)) 
+```
+
+Посчитаем множественные коэффициенты корреляции:
+```{r}
+for (i in cor_vec2) {
+  det_cor_m2 <- det(cor_m2) 
+  algebraic_add2 <- (-1)^(i + i)*det(cor_m2[-i, -i])  
+  cor_vec2[i] = sqrt(1 - det_cor_m2 / algebraic_add2)
+}
+cor_vec2 
+```
+
+После удаления выбросов значения изменились. Наблюдается общее снижение силы связи.
+
+Сила связи NUM_OF_MENT_DIS с остальными переменными сократилась примерно на 1%, NUM_OF_PSYC_BEDS -- на 2%, NUM_OF_MEDICS -- на 2%, NUM_OF_LOWER_INCOME -- практически не изменилась, NUM_OF_UNEMPLOY -- на  3%, NUM_OF_DRUG_ADDICT -- на  14%, NUM_OF_DISABLED -- на 3%, NUM_OF_ELDERLY -- практически не изменилась, NUM_OF_DIVORCES -- на  2%.
+
+Теперь найдем наблюдаемые значения:
+```{r}
+F_vec2 <- c( )
+for (i in cor_vec2) {
+  Fnabl_2 = (i^2 * 1/(9-1))/((1 - i^2)*1/(85 * 9 - 9))
+  F_vec2 <- append( F_vec2, Fnabl_2)
+}
+F_vec2 
+```
+
+Значение Fкр по статистическим таблицам равно Fкр(0,05; 8; 756) = 1.94
+
+Как и ранее абсолютно все значения Fнабл превашывают Fкр, то есть после удаления выбросов все коэффициенты все равно являются значимыми.
+
+# Регрессионный анализ. Линейная регрессионная модель
+
+## Построение моделей
+
+В следующих двух подпунктах мы проведем анализ линейных моделей (двумерных и множественной) для определения одной наиболее оптимальной, по которой будут выполняться все предпосылки регрессионного анализа.
+
+### Двумерные модели линейной регрессии после удаления выбросов
+
+Построим двумерные модели и интерпретируем их:
+
+```{r}
+lm_NUM_OF_PSYC_BEDS <- lm(NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS , data = df_nums_without_blowouts)
+lm_NUM_OF_MEDICS <- lm(NUM_OF_MENT_DIS ~ NUM_OF_MEDICS , data = df_nums_without_blowouts)
+lm_NUM_OF_LOWER_INCOME <- lm(NUM_OF_MENT_DIS ~ NUM_OF_LOWER_INCOME  , data = df_nums_without_blowouts)
+lm_NUM_OF_UNEMPLOY <- lm(NUM_OF_MENT_DIS ~ NUM_OF_UNEMPLOY , data = df_nums_without_blowouts)
+lm_NUM_OF_DRUG_ADDICT <- lm(NUM_OF_MENT_DIS ~ NUM_OF_DRUG_ADDICT , data = df_nums_without_blowouts)
+lm_NUM_OF_DISABLED <- lm(NUM_OF_MENT_DIS ~ NUM_OF_DISABLED , data = df_nums_without_blowouts)
+lm_NUM_OF_ELDERLY <- lm(NUM_OF_MENT_DIS ~ NUM_OF_ELDERLY , data = df_nums_without_blowouts)
+lm_NUM_OF_DIVORCES <- lm(NUM_OF_MENT_DIS ~ NUM_OF_DIVORCES , data = df_nums_without_blowouts)
+summary(lm_NUM_OF_PSYC_BEDS)
+summary(lm_NUM_OF_MEDICS)
+summary(lm_NUM_OF_LOWER_INCOME)
+summary(lm_NUM_OF_UNEMPLOY)
+summary(lm_NUM_OF_DRUG_ADDICT)
+summary(lm_NUM_OF_DISABLED)
+summary(lm_NUM_OF_ELDERLY)
+summary(lm_NUM_OF_DIVORCES)
+```
+
+Как видим, многие из рассматриваемых признаков по отдельности хорошо объясняют поведение зависимой переменной (NUM_OF_PSYC_BEDS, NUM_OF_MEDICS, NUM_OF_UNEMPLOY, NUM_OF_DISABLED и т. д.). Однако присутствует также и признак (NUM_OF_UNEMPLOY), который дает значение $R^2$, очень близкое к нулю. Отметим, что все признаки, кроме NUM_OF_LOWER_INCOME, являются значимыми. По результатам F-statistic видно, что все регрессии, кроме двумерной (NUM_OF_MENT_DIS ~ NUM_OF_LOWER_INCOME) в целом значимы на любом разумном уровне значимости.
+
+Из двумерных моделей наибольшим коэффициентом детерминации обладает модель NUM_OF_MENT_DIS ~ NUM_OF_ELDERLY. Пока что можем утверждать, что она является наиболее оптимальной из всех исследуемых двумерных моделей. 
+
+Теперь визуализируем все модели.
+
+### Визуализация моделей
+
+```{r, warning = FALSE, message = FALSE}
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_PSYC_BEDS', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'green'), conf.int = TRUE,
+          xlab = 'Количество больничных коек', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_MEDICS', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'green'), conf.int = TRUE,
+          xlab = 'Количество врачей-психиаторов', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_LOWER_INCOME', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'red'), conf.int = TRUE,
+          xlab = 'Количество людей с денежными доходами ниже границы бедности', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_UNEMPLOY', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'red'), conf.int = TRUE,
+          xlab = 'Количество безработных', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_DRUG_ADDICT', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'magenta'), conf.int = TRUE,
+          xlab = 'Количество больных наркоманией', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_DISABLED', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'magenta'), conf.int = TRUE,
+          xlab = 'Количество инвалидов', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_ELDERLY', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'magenta'), conf.int = TRUE,
+          xlab = 'Количество пенсионеров', ylab = 'Количество психическии больных')
+
+ggscatter(df_nums_without_blowouts, x = 'NUM_OF_DIVORCES', y = 'NUM_OF_MENT_DIS', cor.coef = TRUE, size = 0.1,
+          add = 'reg.line', add.params = list(color = 'magenta'), conf.int = TRUE,
+          xlab = 'Количество разводов ', ylab = 'Количество психическии больных')
+```
+
+Мы получили графическое представление регрессионных моделей переменной NUM_OF_MENT_DIS с другими переменными. Сразу бросается в глаза, что уравнение регрессии между NUM_OF_LOWER_INCOME и NUM_OF_MENT_DIS не является оптимальным. Об этом же свидетельствуют очень малые значения R в левом верхнему углу (3 график). Все остальные модели хорошо отображают взаимосвязь переменных.
+
+Таким образом, визуализация не дала нам никаких иных факторов, которые могут опровергнуть оптимальность модели NUM_OF_MENT_DIS ~ NUM_OF_ELDERLY. 
+
+Проверим, соответствуют ли её остатки нормальному закону:
+
+```{r, warning=FALSE}
+res_1 <- lm_NUM_OF_ELDERLY$residuals
+dfres_1 <- data.frame(cbind(res_1, freq(res_1)[,2]))
+
+plot(seq(1, nrow(df_nums_without_blowouts), 1), res_1, pch = 16, xlab = 'Номер наблюдения', ylab = 'Остаток')
+abline(h = mean(res_1), col = 'red', lwd = 2)
+```
+
+__График остатков модели lm_NUM_OF_ELDERLY__
+
+```{r}
+ggplot(dfres_1, aes(x = res_1)) + 
+  geom_histogram(color = "black", fill = "lightblue") + 
+  ylab("Частота") +
+  xlab("Остаток")
+```
+
+__Гистограмма распределения частот остатков модели lm_NUM_OF_ELDERLY__
+
+```{r}
+qqnorm(res_1, pch = 16, xlab = 'Теоретический квантиль', ylab = 'Выборочный квантиль')
+qqline(res_1, col = 'red', lwd = 2)
+```
+
+__Нормальный график Квантиль-Квантиль остатков модели lm_NUM_OF_ELDERLY__
+
+Итак вполне возможно, что остатки распределены нормально. Об этом говорит полученная гистограмма распределения и график Квантиль-Квантиль.
+
+Однако все же необходимо провести формальные тесты:
+
+```{r}
+pander(shapiro.test(res_1))
+```
+
+```{r}
+pander(jarque.bera.test(res_1))
+```
+
+Тест Шапиро-Уилка не отвергает гипотезу о нормальном распределении остатков на уровне значимости $\alpha=0.01$.
+
+Тест Жарка-Бера отвергает данную гипотезу.
+
+Дополнительно проверим отсутствие гетероскедастичности при помощи теста Бройша-Пагана:
+
+```{r}
+bptest(lm_NUM_OF_ELDERLY)
+```
+
+Поскольку $p-value<0,05$, мы отвергаем нулевую гипотезу. У нас нет достаточных доказательств того, что в регрессионной модели отсутствует гетероскедастичность.
+
+Теоретическая дисперсия случайной составляющей не одинакова для всех наблюдений на уровне значимости $\alpha=0.01$.
+
+Можем сделать вывод: оптимальная двумерная модель отсутстввует, так как ни по одной из моделей не выполняются все необходимые предпосылки
+
+Перейдем к анализу модели множественной регрессии.
+
+### Линейная модель множественной регресии
+
+Попробуем найти иную модель, которая бы состояла из множества переменных и могла объяснить поведение зависимого фактора еще точнее (при этом, чтобы все предпосылки построения регрессионной модели выполнялись).
+
+Предварительно необходимо исключить возможную мультиколлинеарность, поэтому рассмотрим корреляционную матрицу еще раз:
+
+```{r}
+corrplot.mixed(cor(df_nums_without_blowouts), lower.col = 'black', upper = 'circle', number.cex = 0.5, tl.pos = 'lt', 
+               tl.cex = 0.5, tl.col = 'black')
+```
+
+Для определения оптимальной модели во множественной регрессии можно применить функция step():
+
+```{r}
+fit <- lm(NUM_OF_MENT_DIS ~. , data = na.omit(df_nums_without_blowouts))
+fit.step <- step(fit, direction = 'both', trace = FALSE)
+summary(fit.step)
+```
+
+В этой модели получились 3 независимые переменные: NUM_OF_PSYC_BEDS, NUM_OF_UNEMPLOY, NUM_OF_DIVORCES. Уровень корреляции между ними меньше 0,85, следовательно, мультиколлинеарность исключается.
+
+Можем утверждать, что оптимальной моделью множественной регрессии является модель NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS + NUM_OF_UNEMPLOY + NUM_OF_DIVORCES. Построим ее:
+
+```{r}
+lm_linear_1 <- lm(NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS + NUM_OF_UNEMPLOY + 
+    NUM_OF_DIVORCES , data = df_nums_without_blowouts)
+pander(summary(lm_linear_1))
+```
+
+Как видим ее значение $R^2$ (равное 0.8925) является довольно-таки высоким, что снова подтверждает оптимальность данной модели.  
+
+Теперь перейдем к проверке соответствия остатков полученной модели нормальному закону.
+
+```{r, warning=FALSE}
+res <- lm_linear_1$residuals
+dfres <- data.frame(cbind(res, freq(res)[,2]))
+
+plot(seq(1, nrow(df_nums_without_blowouts), 1), res, pch = 16, xlab = 'Номер наблюдения', ylab = 'Остаток')
+abline(h = mean(res), col = 'red', lwd = 2)
+```
+
+__График остатков модели lm_linear_1__
+
+```{r}
+ggplot(dfres, aes(x = res)) + 
+  geom_histogram(color = "black", fill = "lightblue") + 
+  ylab("Частота") +
+  xlab("Остаток")
+```
+
+__Гистограмма распределения частот остатков lm_linear_1__
+
+```{r}
+qqnorm(res, pch = 16, xlab = 'Теоретический квантиль', ylab = 'Выборочный квантиль')
+qqline(res, col = 'red', lwd = 2)
+```
+
+__Нормальный график Квантиль-Квантиль остатков модели lm_linear_1__
+
+Итак, вполне возможно, что остатки распределены нормально. Об этом говорит полученная гистограмма распределения и график Квантиль-Квантиль.
+
+Однако все же необходимо провести формальные тесты:
+
+```{r}
+pander(shapiro.test(res))
+```
+
+```{r}
+pander(jarque.bera.test(res))
+```
+
+В соответствии с результатами работы обоих тестов $p-value$ превышает любой разумный уровень значимости, в том числе $\alpha=0.01 =>$ гипотеза о нормальном распределении остатков модели $lm_linear_1$ не отвергается.
+
+Дополнительно проверим отсутствие гетероскедастичности при помощи теста Бройша-Пагана:
+
+```{r}
+bptest(lm_linear_1)
+```
+
+Поскольку $p-value>0,01$, мы не отвергаем нулевую гипотезу. Имеются достаточные доказательства того, что в регрессионной модели отсутствует гетероскедастичность.
+
+Теоретическая дисперсия случайной составляющей одинакова для всех наблюдений на уровне значимости $\alpha=0.01$.
+
+Сделаем вывод: самой оптимальной моделью множественной регрессии является NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS + NUM_OF_UNEMPLOY + NUM_OF_DIVORCES. Все предпосылки по ней выполняются. 
+
+## Построение графиков предсказанных и истинных значений зависимой переменной
+
+Множественная модель NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS + NUM_OF_UNEMPLOY + NUM_OF_DIVORCES:
+
+```{r}
+actual <- df_nums_without_blowouts$NUM_OF_MENT_DIS
+predicted <- predict(lm_linear_1)
+
+df <- data.frame(actual,predicted)
+
+
+ggplot(df, aes(x = seq_along(actual))) +
+  geom_line(aes(y = actual, color = "Actual")) +
+  geom_line(aes(y = predicted, color = "Predicted")) +
+  scale_color_manual(values = c("Actual" = "black", "Predicted" = "red"), 
+                     name = "Values",
+                     labels = c("Фактические значения", "Предсказанные значения")) +
+  xlab("Номер наблюдения") + ylab("Количество психически больных")
+
+```
+
+Предсказанная траектория почти в точности огибает траекторию фактических значений.
+
+## Запись уравнения регрессии
+
+Так как у нас нету оптимальной двумерной модели линейной регрессии, то сразу перейдем к уравнению множественной регрессии
+
+Запишем уравнение регрессии для оптимальной множественной модели. Для этого сначала выведем общие данные:
+
+```{r}
+summary(lm_linear_1)
+```
+
+$\ y_{mentdis} = -1015.3328 + 12.5942*x_{beds} + 163.1338*x_{unemploy} + 3.0112*x_{divorces} + ε$
+
+Оптимальная двумерная модель отсутствует. Оптимальная модель множественной регрессии строится по трем признакам: NUM_OF_PSYC_BEDS, NUM_OF_UNEMPLOY, NUM_OF_DIVORCES. В следующем пункте интерпретируем коэффициенты. 
+
+## Интерпретация  коэффициентов и характеристик
+
+### Интепретация коэффициентов  NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS + NUM_OF_UNEMPLOY + NUM_OF_DIVORCES
+
+1) Увеличение независимой переменной "число коек психиатрических специальностей, абсолютное значение" на 1 приводит к увеличению зависимой переменной "число пациентов с психическими расстройствами, обратившихся в психоневрологические организации, абсолютное значение" на 12.5942. Увеличение независимой переменной "численность безработных в возрасте 15-72 лет (тыс. человек)" на 1 приводит к увеличению зависимой переменной на 163.1338. Увеличение независимой переменной "количество разводов" на 1 приводит к увеличению зависимой переменной на 3.0112. 
+
+2) Значимость коэффициентов в уравнении регрессии говорит о том, насколько вероятно, что эти коэффициенты различны от нуля случайно. Если коэффициент значим, то он действительно отличен от нуля и имеет влияние на зависимую переменную. Заметим, что коэффициенты NUM_OF_PSYC_BEDS и NUM_OF_DIVORCES значимы (так как значения p-уровня меньше заданного уровня значимости равного 0,01), а коэффициент NUM_OF_UNEMPLOY нет. Значение p-value в целом модели так же меньше 0,01, что говорит о ее значимости.
+
+3) Значение Adjusted R-squared (скорректированного коэффициента детерминации) в уравнении регрессии линейной модели множественной регрессии указывает на то, насколько хорошо модель соответствует данным. Значение Adjusted R-squared = 0.8925 означает, что 89.25% изменчивости зависимой переменной (для которой строится модель) можно объяснить изменчивостью независимых переменных в модели. Иными словами, этот процент дисперсии зависимой переменной объясняется влиянием факторов, учитываемых в модели, а оставшиеся 10.75% дисперсии остаются неразъясненными и связаны с другими факторами или случайными факторами. Таким образом, значение 0.8925 говорит о том, что модель имеет хорошую предсказательную способность и может быть использована для прогнозирования значений зависимой переменной с высокой точностью
+
+4) Константа в начале говорит о том, какой будет итог модели при равенстве всех влияющих факторов нулю.  
+
+5) Стандартная ошибка по показателю является усредненной ошибкой предсказания значения числа пациентов с психическими расстройствами.
+
+Посчитаем коэффициент эластичности:
+
+```{r}
+e_beds <- 12.5942 * (mean(df_nums_without_blowouts$NUM_OF_PSYC_BEDS)/mean(df_nums_without_blowouts$NUM_OF_MENT_DIS))
+e_unemploy <- 163.1338 * (mean(df_nums_without_blowouts$NUM_OF_UNEMPLOY)/mean(df_nums_without_blowouts$NUM_OF_MENT_DIS))
+e_divorces <- 3.0112 * (mean(df_nums_without_blowouts$NUM_OF_DIVORCES)/mean(df_nums_without_blowouts$NUM_OF_MENT_DIS))
+e_beds
+e_unemploy
+e_divorces
+```
+
+Изменение признака приведет к увеличению зависимой переменной:
+
+1) Изменение числа коек психиатрических специальностей приведет к увеличению числа пациентов с психическими расстройствами на 42.75%. Такой числовой показатель можно интепретировать так: благодаря увеличению числа коек, больше пациентов получают доступ к лечению в больницах. 
+
+2) Изменение численности безработных приведет к увеличению числа пациентов с психическими расстройствами на 15.89%. Такой числовой показатель можно интепретировать так: лишение заработка из-за безработицы вредит психологическому здоровью людей, из-за чего те обращаются за профессиональной помощью.
+
+3) Изменение количества разводов приведет к увеличению числа пациентов с психическими расстройствами на 44.40%. Такой числовой показатель можно интепретировать так: разводы негативно влияют на психику, поэтому люди обращаются за профессиональной помощью.
+
+Перейдем к выводу: все предпосылки модели множественной регрессии по признакам NUM_OF_PSYC_BEDS, NUM_OF_UNEMPLOY, NUM_OF_DIVORCES выполняются, следовательно, мы точно можем утверждать, что она является наиболее оптимальной из всех линейных моделей. 
+
+Теперь перейдем к анализу нелинейных моделей.
+
+# Регрессионный анализ. Нелинейная регрессионная модель
+
+## Построение моделей
+
+Рассмотрим 3 нелинейные модели: экспоненциальную, логарифмическую и степенную.
+
+### Экспоненциальная модель
+
+```{r}
+df_nums_without_blowouts$log_NUM_OF_MENT_DIS <- log(df_nums_without_blowouts$NUM_OF_MENT_DIS)
+nlm_exponent <- lm(log_NUM_OF_MENT_DIS ~ NUM_OF_PSYC_BEDS + NUM_OF_MEDICS + NUM_OF_LOWER_INCOME + NUM_OF_UNEMPLOY + NUM_OF_DRUG_ADDICT + NUM_OF_DISABLED + NUM_OF_ELDERLY + NUM_OF_DIVORCES, df_nums_without_blowouts)
+summary(nlm_exponent)
+```
+
+$R^2_{adj}=0.7206$ 
+
+Проверка на значимость: 
+
+Мы видим, что по результатам F-statistic экспоненциальная модель регрессии в целом значима на любом разумном уровне значимости, однако, рассмартривая отдельные коэффициенты уравнения, получаем, что только один из них значимый. Это указывает на то, что зависимая переменная зависит от исследуемых факторов, но вклад каждого фактора в модель незначительный и может быть устранен без больших потерь точности прогноза модели. В таком случае возможно упрощение модели, исключение незначимых факторов или использование другой модели может быть более рациональным для прогнозирования значения зависимой переменной.
+
+Теперь перейдем к проверке соответствия остатков полученной экспоненциальной модели нормальному закону:
+
+```{r, warning=FALSE}
+res_exp <- nlm_exponent$residuals
+dfres_exp <- data.frame(cbind(res_exp, freq(res_exp)[,2]))
+
+plot(seq(1, nrow(df_nums_without_blowouts), 1), res_exp, pch = 16, xlab = 'Номер наблюдения', ylab = 'Остаток')
+abline(h = mean(res), col = 'red', lwd = 2)
+```
+
+__График остатков модели nlm_exponent__
+
+```{r}
+ggplot(dfres_exp, aes(x = res_exp)) + 
+  geom_histogram(color = "black", fill = "lightblue") + 
+  ylab("Частота") +
+  xlab("Остаток")
+```
+
+__Гистограмма распределения частот остатков nlm_exponent__
+
+Наблюдается левосторонняя асимметрия, что не свойственно нормальному закону.
+
+```{r}
+qqnorm(res_exp, pch = 16, xlab = 'Теоретический квантиль', ylab = 'Выборочный квантиль')
+qqline(res_exp, col = 'red', lwd = 2)
+```
+
+__Нормальный график Квантиль-Квантиль остатков модели nlm_exponent__
+
+Точки на графике довольно сильно отклоняются от прямой теоретических квантилей.
+
+Гистограмма распределения остатков данной модели и квантильный график не позволяют сказать, что они распределены по нормальному закону. Докажем это с помощью тестов:
+
+```{r}
+pander(shapiro.test(res_exp))
+```
+
+```{r}
+pander(jarque.bera.test(res_exp))
+```
+
+Оба теста демонстрируют крайне низкие p-значения $=>$. На уровне значимости $\alpha=0.01$ гипотеза о нормальном распределении остатков отвергается.
+
+Тест Бройша-Пагана:
+```{r}
+bptest(nlm_exponent)
+```
+
+Тем не менее, тест Бройша-Пагана говорит нам о том, что теоретическая дисперсия случайной составляющей одинакова для всех наблюдений на уровне значимости $\alpha=0.01$.
+
+### Логарифмическая модель
+
+```{r}
+df_nums_without_blowouts[df_nums_without_blowouts == 0] <- NA
+df_no_NA <- na.omit(df_nums_without_blowouts)
+nlm_log <- lm(df_no_NA$NUM_OF_MENT_DIS ~ log(df_no_NA$NUM_OF_PSYC_BEDS)  + log(df_no_NA$NUM_OF_MEDICS) + log(df_no_NA$NUM_OF_LOWER_INCOME) + log(df_no_NA$NUM_OF_UNEMPLOY) + log(df_no_NA$NUM_OF_DRUG_ADDICT) + log(df_no_NA$NUM_OF_DISABLED) + log(df_no_NA$NUM_OF_ELDERLY) + log(df_no_NA$NUM_OF_DIVORCES))
+summary(nlm_log)
+```
+
+$R^2_{adj}=0.6381$
+
+Вывод: Нелинейная логарифмическая модель может использоваться для объяснения более сложных причинно-следственных связей, которые не могут быть описаны простой линейной моделью. Это может привести к тому, что объясняющая сила модели будет ниже.
+
+Проверка на значимость: 
+
+По результатам F-statistic логарифмическая модель регрессии в целом значима на любом разумном уровне значимости. В данном случае мы не имеем значимых коэффициентов модели, если рассматривать их по отдельности.
+
+Теперь перейдем к проверке соответствия остатков полученной логарифмической модели нормальному закону:
+
+```{r, warning=FALSE}
+res_log <- nlm_log$residuals
+dfres_log <- data.frame(cbind(res_log, freq(res_log)[,2]))
+plot(seq(1, nrow(df_nums_without_blowouts)-1, 1), res_log, pch = 16, xlab = 'Номер наблюдения', ylab = 'Остаток')
+abline(h = mean(res_log), col = 'red', lwd = 2)
+```
+
+__График остатков модели nlm_log__
+
+```{r}
+ggplot(dfres_log, aes(x = res_log)) + 
+  geom_histogram(color = "black", fill = "lightblue") + 
+  ylab("Частота") +
+  xlab("Остаток")
+```
+
+__Гистограмма распределения частот остатков nlm_log__
+
+Наблюдается правостороння асимметрия, что не свойственно нормальному закону.
+
+```{r}
+qqnorm(res_log, pch = 16, xlab = 'Теоретический квантиль', ylab = 'Выборочный квантиль')
+qqline(res_log, col = 'red', lwd = 2)
+```
+
+__Нормальный график Квантиль-Квантиль остатков модели nlm_log__
+
+Точки на графике довольно сильно отклоняются от прямой теоретических квантилей.
+
+Гистограмма распределения остатков данной модели и квантильный график не позволяют сказать, что они распределены по нормальному закону. Докажем это с помощью тестов:
+
+```{r}
+pander(shapiro.test(res_log))
+```
+
+```{r}
+pander(jarque.bera.test(res_log))
+```
+
+Оба теста демонстрируют крайне низкие p-значения $=>$ На уровне значимости $\alpha=0.01$ гипотеза о нормальном распределении остатков отвергается.
+
+Тест Бройша-Пагана:
+```{r}
+bptest(nlm_log)
+```
+
+Тем не менее, тест Бройша-Пагана говорит нам о том, что теоретическая дисперсия случайной составляющей одинакова для всех наблюдений на уровне значимости $\alpha=0.01$.
+
+### Степенная модель
+
+```{r}
+df_no_NA$log_NUM_OF_MENT_DIS <- log(df_no_NA$NUM_OF_MENT_DIS)
+df_no_NA$log_NUM_OF_PSYC_BEDS <- log(df_no_NA$NUM_OF_PSYC_BEDS)
+df_no_NA$log_NUM_OF_MEDICS <- log(df_no_NA$NUM_OF_MEDICS)
+df_no_NA$log_NUM_OF_LOWER_INCOME <- log(df_no_NA$NUM_OF_LOWER_INCOME)
+df_no_NA$log_NUM_OF_UNEMPLOY <- log(df_no_NA$NUM_OF_UNEMPLOY)
+df_no_NA$log_NUM_OF_DRUG_ADDICT <- log(df_no_NA$NUM_OF_DRUG_ADDICT)
+df_no_NA$log_NUM_OF_DISABLED <- log(df_no_NA$NUM_OF_DISABLED)
+df_no_NA$log_NUM_OF_ELDERLY <- log(df_no_NA$NUM_OF_ELDERLY)
+df_no_NA$log_NUM_OF_DIVORCES <- log(df_no_NA$NUM_OF_DIVORCES)
+
+nlm_power <- lm(log(df_no_NA$NUM_OF_MENT_DIS) ~ log(df_no_NA$NUM_OF_PSYC_BEDS)  + log(df_no_NA$NUM_OF_MEDICS) + log(df_no_NA$NUM_OF_LOWER_INCOME) + log(df_no_NA$NUM_OF_UNEMPLOY) + log(df_no_NA$NUM_OF_DRUG_ADDICT) + log(df_no_NA$NUM_OF_DISABLED) + log(df_no_NA$NUM_OF_ELDERLY) + log(df_no_NA$NUM_OF_DIVORCES))
+summary(nlm_power)
+```
+
+$R^2_{adj}=0.9038$
+
+Проверка на значимость: 
+
+По результатам F-statistic степенная модель регрессии в целом значима на любом разумном уровне значимости. В данном случае только 2 значимых коэффициента модели по отдельности (NUM_OF_DIVORCES, NUM_OF_MENT_DIS).
+
+Теперь перейдем к проверке соответствия остатков полученной степенной модели нормальному закону:
+
+```{r, warning=FALSE}
+res_pow <- nlm_power$residuals
+dfres_pow <- data.frame(cbind(res_pow, freq(res_pow)[,2]))
+plot(seq(1, nrow(df_nums_without_blowouts)-1, 1), res_pow, pch = 16, xlab = 'Номер наблюдения', ylab = 'Остаток')
+abline(h = mean(res_pow), col = 'red', lwd = 2)
+```
+
+__График остатков модели nlm_power__
+
+```{r}
+ggplot(dfres_pow, aes(x = res_pow)) + 
+  geom_histogram(color = "black", fill = "lightblue") + 
+  ylab("Частота") +
+  xlab("Остаток")
+```
+
+__Гистограмма распределения частот остатков nlm_power__
+
+Построенная гистограмма отдаленно напоминает гистограмму нормального распределения.
+
+```{r}
+qqnorm(res_pow, pch = 16, xlab = 'Теоретический квантиль', ylab = 'Выборочный квантиль')
+qqline(res_pow, col = 'red', lwd = 2)
+```
+
+__Нормальный график Квантиль-Квантиль остатков модели nlm_power__
+
+Точки на графике довольно близки к прямой теоретических квантилей.
+
+Итак, вполне возможно, что остатки распределены нормально. Об этом говорит полученная гистограмма распределения и график Квантиль-Квантиль. Докажем это с помощью тестов:
+
+```{r}
+pander(shapiro.test(res_pow))
+```
+
+```{r}
+pander(jarque.bera.test(res_pow))
+```
+
+Оба теста не позволяют отвергнуть гипотезу о нормальном распределении остатков на любом разумном уровне значимости.
+
+Тест Бройша-Пагана:
+```{r}
+bptest(nlm_power)
+```
+
+Кроме того, тест Бройша-Пагана говорит нам о том, что теоретическая дисперсия случайной составляющей одинакова для всех наблюдений на уровне значимости $\alpha=0.01$.
+
+Итак, из всех трех построенных нелинейных моделей обе предпосылки (о нормальности остатков и о гомоскедастичности) выполняются только у степенной модели. 
+
+## Выбор лучшего нелинейного уравнения регрессии
+
+Вывод: лишь у степенной модли выполняются все предпосылки об адекватности модели, именно поэтому мы можем назвать эту модель оптимальной из всех нелинейных. 
+
+## Построение графиков предсказанных и истинных значений зависимой переменной
+
+### Экспоненциальная модель
+
+```{r}
+actual <- df_nums_without_blowouts$log_NUM_OF_MENT_DIS
+predicted <- predict(nlm_exponent)
+
+df <- data.frame(actual,predicted)
+
+
+ggplot(df, aes(x = seq_along(actual))) +
+  geom_line(aes(y = actual, color = "Actual")) +
+  geom_line(aes(y = predicted, color = "Predicted")) +
+  scale_color_manual(values = c("Actual" = "black", "Predicted" = "blue"), 
+                     name = "Values",
+                     labels = c("Фактические значения", "Предсказанные значения")) +
+  xlab("Номер наблюдения") + ylab("Количество психически больных")
+
+```
+
+### Логарифмическая модель 
+
+```{r}
+actual <- df_no_NA$NUM_OF_MENT_DIS
+predicted <- predict(nlm_log)
+
+df <- data.frame(actual,predicted)
+
+
+ggplot(df, aes(x = seq_along(actual))) +
+  geom_line(aes(y = actual, color = "Actual")) +
+  geom_line(aes(y = predicted, color = "Predicted")) +
+  scale_color_manual(values = c("Actual" = "black", "Predicted" = "violetred"), 
+                     name = "Values",
+                     labels = c("Фактические значения", "Предсказанные значения")) +
+  xlab("Номер наблюдения") + ylab("Количество психически больных")
+
+```
+
+### Степенная модель
+
+```{r}
+actual <- df_no_NA$log_NUM_OF_MENT_DIS
+predicted <- predict(nlm_power)
+
+df <- data.frame(actual,predicted)
+
+
+ggplot(df, aes(x = seq_along(actual))) +
+  geom_line(aes(y = actual, color = "Actual")) +
+  geom_line(aes(y = predicted, color = "Predicted")) +
+  scale_color_manual(values = c("Actual" = "black", "Predicted" = "purple2"), 
+                     name = "Values",
+                     labels = c("Фактические значения", "Предсказанные значения")) +
+  xlab("Номер наблюдения") + ylab("Количество психически больных")
+
+```
+
+Из всех графиков истинных и предсказанных значений переменной NUM_OF_MENT_DIS в нелинейных моделях наибольшая точность предсказаний у степенной модели.
+
+## Запись уравнения регрессии
+
+Построим 3 уравнения регрессии для исследуемых нелинейных моделей.
+
+1) Экспоненциальная модель:
+
+```{r}
+summary(nlm_exponent)
+```
+
+$\ log(y_{mentdis}) = (8.297e+00) + (3.591e-04)*x_{beds} + (3.470e-03)*x_{medics} + (5.266e-02)*x_{income} - (7.271e-03)*x_{unemploy} - (9.225e-04)*x_{addict} + (1.018e-06)*x_{disabled} + (3.819e-04)*x_{elderly} + (1.056e-04)*x_{divorces} + ε$
+
+2) Логарифмическая модель:
+
+```{r}
+summary(nlm_log)
+```
+
+$\ log(y_{mentdis}) = -93203.9 - 4012.2*log(x_{beds}) + 8826.9*log(x_{medics}) - 5014.9*log(x_{income}) + 7703.2*log(x_{unemploy}) - 265.7*log(x_{addict}) + 1143.2*log(x_{disabled}) + 1852.5*log(x_{elderly}) + 9707.8*log(x_{divorces}) + ε$
+
+3) Степенная модель:
+
+```{r}
+summary(nlm_power)
+```
+
+$\ log(y_{mentdis}) = log(2.74370) + 0.13958*log(x_{beds}) + 0.18141*log(x_{medics}) + 0.14310*log(x_{income}) - 0.04970*log(x_{unemploy}) - 0.03687*log(x_{addict}) + 0.05541*log(x_{disabled}) + 0.27068*log(x_{elderly}) + 0.42024*log(x_{divorces}) + ε$
+
+В предыдущих двух пунктах мы выяснили, что степенная модель больше двух других соответствует оптимальной. Поэтому в следующем пункте мы интерпретируем именно ее коэффициенты.
+
+## Интерпретация  коэффициентов и характеристик степенной модели
+
+1) Коэффициент при переменной NUM_OF_PSYC_BEDS означает, что при увеличении количества коек в больницах для психически больных на одну единицу логарифма, количество психически больных людей в стране увеличивается на примерно 14%. Коэффициент при переменной NUM_OF_MEDICS означает, что при увеличении количества психиатров на одну единицу логарифма, количество психически больных людей в стране увеличивается на примерно 18%. Коэффициент при переменной NUM_OF_LOWER_INCOME означает, что при увеличении количества бедного населения на одну единицу логарифма, количество психически больных людей в стране увеличивается на примерно 14%. Коэффициент при переменной NUM_OF_UNEMPLOY означает, что при увеличении количества безработного населения на одну единицу логарифма, количество психически больных людей в стране уменьшается примерно на 5%. Коэффициент при переменной NUM_OF_DRUG_ADDICT означает, что при увеличении количества наркоманов в России на одну единицу логарифма, количество психически больных людей в стране уменьшается примерно на 4%. Коэффициент при переменной NUM_OF_DISABLED означает, что при увеличении количества инвалидов на одну единицу логарифма, количество психически больных людей в стране увеличится примерно на 5%. Коэффициент при переменной NUM_OF_ELDERLY означает, что при увеличении количества пенсионеров на одну единицу логарифма, количество психически больных людей в стране увеличится примерно на 27%. Коэффициент при переменной NUM_OF_DIVORCES означает, что при увеличении количества разводов на одну единицу логарифма, количество психически больных людей в стране увеличивается на примерно 42%.
+
+2) Все выглядит вполне логично: увеличение коек и психиаторов приведёт к тому, что большее количество людей с психическими заболеваниями сможет получить помощь, они будут обращаться в больницы и появляться в реестре как mentally diseased, что приведёт к росту целевой переменной. Увеличение уровня бедности в стране, количества инвалидов, пенсионеров и разводов также вполне логично будут способствовать увеличению заболеваемости. Рост количества наркоманов и безработных может способствовать уменьшению количества зафиксированых в реестре психически больных людей, т.к. эта часть населения будет в первую очередь заинтересована в поиске работы и дозы, а не в лечении своих проблем с психикой
+
+3) Значение скорректированного коэффициента детерминации является мерой того, насколько хорошо модель объясняет вариацию в зависимой переменной с учетом числа используемых переменных. Значение 0.9038 говорит о том, что 90.38% дисперсии зависимой переменной может быть объяснено выбранными независимыми переменными в нелинейной степенной модели. Это означает, что модель достаточно точна в прогнозировании значений зависимой переменной и может быть использована для дальнейших анализов и прогнозирования. 
+
+4) Константа в начале говорит о том, какой будет итог модели при равенстве всех влияющих факторов нулю.  
+
+5) Стандартная ошибка по показателю является усредненной ошибкой предсказания значения числа пациентов с психическими расстройствами.
+
+Коэффициент эластичности показывает, насколько процентов в среднем изменится результативный, зависимый признак Y (в нашем случае NUM_OF_MENT_DIS) при изменении некоторого независимого признака на 1% при фиксированных значениях остальных. Посчитаем его:
+
+```{r}
+e_beds <- 0.13958 * mean(df_no_NA$log_NUM_OF_PSYC_BEDS)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_medics <-  0.18141 * mean(df_no_NA$log_NUM_OF_MEDICS)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_income <- 0.14310 * mean(df_no_NA$log_NUM_OF_LOWER_INCOME)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_unemploy <- (-0.04970) * mean(df_no_NA$log_NUM_OF_UNEMPLOY)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_addict <- (-0.03687) * mean(df_no_NA$log_NUM_OF_DRUG_ADDICT)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_disabled <- 0.05541 * mean(df_no_NA$log_NUM_OF_DISABLED)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_elderly <- 0.27068 * mean(df_no_NA$log_NUM_OF_ELDERLY)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_divorces <- 0.42024 * mean(df_no_NA$log_NUM_OF_DIVORCES)/mean(df_no_NA$log_NUM_OF_MENT_DIS)
+e_beds
+e_medics
+e_income
+e_unemploy
+e_addict
+e_disabled
+e_elderly
+e_divorces
+```
+
+Подсчитав численные значения коэффициентов эластичности для каждой переменной можем сказать: изменение числа коек психиатрических специальностей приведет к увеличению числа пациентов с психическими расстройствами на 9,31%. Аналогичные выводы с другими показателями.
+
+Вывод: все предпосылки степенной модели выполняются, её коэффициент детерминации самый высокий из всех трех построенных нелинейных моделей, у нее наибольшая точность предсказаний, следовательно, степенная модель точно является наиболее оптимальной из всех нелинейных.
+
+Далее перейдем к определению одной самой оптимальной модели из линейной и нелинейной. 
+
+# Регрессионный анализ. Итог.
+
+Для определения наиболее оптимальной модели среди линейных и нелинейных одновременно воспользуемся информационными критериями AIC/BIC:
+```{r}
+IC_table <- data.frame(n = c('lm_linear_1', 'nlm_power'), 
+                  a = rbind(AIC(lm_linear_1), AIC(nlm_power)), 
+                  b = rbind(BIC(lm_linear_1), BIC(nlm_power)))
+colnames(IC_table) <- c('Модель','Значение AIC','Значение BIC')
+print(IC_table)
+```
+
+Так как значение критериев обратно зависит от значения функции правдоподобия, то чем меньше значение, тем лучше. Видим, что в данном случае целесообразно использование нелинейной модели $nlm\_power$.
